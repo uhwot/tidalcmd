@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/elliotchance/orderedmap/v2"
 )
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
@@ -78,6 +80,15 @@ func getCsrfToken(jar http.CookieJar) (string, error) {
 	return "", errors.New("CSRF token not present")
 }
 
+func makeQueryString(params *orderedmap.OrderedMap[string, string]) string {
+	var builder strings.Builder
+	for p := params.Front(); p != nil; p = p.Next() {
+		builder.WriteString(fmt.Sprintf("%s=%s&", p.Key, url.QueryEscape(p.Value)))
+	}
+	rawQuery := builder.String()
+	return rawQuery[:len(rawQuery)-1]
+}
+
 type ddResponse struct {
 	Cookie string `json:"cookie"`
 }
@@ -120,55 +131,14 @@ func WebAuth(email string, password string, clientId string, clientSecret string
 		},
 	}
 
-	params := url.Values{}
-	if appMode != "" {
-		params.Set("appMode", appMode)
-	}
-	params.Set("client_id", clientId)
-	//params.Set("client_unique_key", uniqueKey)
-	params.Set("code_challenge", codeChallenge)
-	params.Set("code_challenge_method", "S256")
-	params.Set("language", "en")
-	params.Set("redirect_uri", redirectUri)
-	params.Set("response_type", "code")
-
-	queryString := params.Encode()
-
-	loginUrl := "https://login.tidal.com/authorize?" + queryString
-
-	// csrf token
-	req, err := http.NewRequest("GET", loginUrl, nil)
-	if err != nil {
-		return nil, "", err
-	}
-	req.Header.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-	req.Header.Add("accept-language", "en-US,en;q=0.5")
-	req.Header.Add("user-agent", USER_AGENT)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, "", err
-	}
-
-	switch resp.StatusCode {
-	case 200:
-		break
-	case 400:
-		return nil, "", errors.New("invalid client")
-	case 403:
-		return nil, "", errors.New("bot protection triggered on authorize")
-	default:
-		return nil, "", fmt.Errorf("invalid status code: %d", resp.StatusCode)
-	}
-
 	payload := url.Values{}
 	payload.Add("jsData", fmt.Sprintf(`{"ua":"%s"}`, USER_AGENT))
 	payload.Add("ddk", "1F633CDD8EF22541BD6D9B1B8EF13A")
-	payload.Add("Referer", url.QueryEscape(loginUrl))
+	payload.Add("Referer", "https%3A%2F%2Ftidal.com%2F")
 	payload.Add("ddv", "4.25.0")
 
 	body := strings.NewReader(payload.Encode())
-	req, err = http.NewRequest("POST", "https://dd.tidal.com/js/", body)
+	req, err := http.NewRequest("POST", "https://dd.tidal.com/js/", body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -177,7 +147,7 @@ func WebAuth(email string, password string, clientId string, clientSecret string
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 	req.Header.Add("user-agent", USER_AGENT)
 
-	resp, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, "", err
 	}
@@ -197,6 +167,48 @@ func WebAuth(email string, password string, clientId string, clientSecret string
 	}
 
 	client.Jar.SetCookies(&url.URL{Scheme: "https", Host: "login.tidal.com"}, setCookieHeader(ddData.Cookie))
+
+	params := orderedmap.NewOrderedMap[string, string]()
+	params.Set("response_type", "code")
+	params.Set("redirect_uri", redirectUri)
+	params.Set("client_id", clientId)
+	params.Set("lang", "EN")
+	if appMode != "" {
+		params.Set("appMode", appMode)
+	}
+	//params.Set("client_unique_key", uniqueKey)
+	params.Set("code_challenge", codeChallenge)
+	params.Set("code_challenge_method", "S256")
+	//params.Set("restrict_signup", "true")
+
+	queryString := makeQueryString(params)
+
+	loginUrl := "https://login.tidal.com/authorize?" + queryString
+
+	// csrf token
+	req, err = http.NewRequest("GET", loginUrl, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+	req.Header.Add("accept-language", "en-US,en;q=0.5")
+	req.Header.Add("user-agent", USER_AGENT)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch resp.StatusCode {
+	case 200:
+		break
+	case 400:
+		return nil, "", errors.New("invalid client")
+	case 403:
+		return nil, "", errors.New("bot protection triggered on authorize")
+	default:
+		return nil, "", fmt.Errorf("invalid status code: %d", resp.StatusCode)
+	}
 
 	csrfToken, err := getCsrfToken(client.Jar)
 	if err != nil {
