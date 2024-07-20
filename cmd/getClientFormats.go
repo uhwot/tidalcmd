@@ -8,10 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const MQA_ID = 177525913
+const MQA_ID = 165535571
 const HIRES_FLAC_ID = 296612885
 const SONY_360_ID = 203033693
-const ATMOS_ID = 233057630
+const ATMOS_ID = 243175233
 
 var getClientFormatsCmd = &cobra.Command{
 	Use:   "getClientFormats",
