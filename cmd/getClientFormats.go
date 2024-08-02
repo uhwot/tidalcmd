@@ -28,7 +28,7 @@ var getClientFormatsCmd = &cobra.Command{
 			{HIRES_FLAC_ID, "HIGH"},
 			{HIRES_FLAC_ID, "LOSSLESS"},
 			{HIRES_FLAC_ID, "HI_RES_LOSSLESS"},
-			{ATMOS_ID, "HI_RES_LOSSLESS"},
+			{ATMOS_ID, "HI_RES"},
 		}
 
 		fmt.Println("Supported formats:")
