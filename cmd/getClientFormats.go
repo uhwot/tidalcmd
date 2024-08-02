@@ -8,9 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const MQA_ID = 165535571
 const HIRES_FLAC_ID = 296612885
-const SONY_360_ID = 203033693
 const ATMOS_ID = 243175233
 
 var getClientFormatsCmd = &cobra.Command{
@@ -26,13 +24,11 @@ var getClientFormatsCmd = &cobra.Command{
 			TrackId int
 			quality string
 		}{
-			{MQA_ID, "LOW"},
-			{MQA_ID, "HIGH"},
-			{MQA_ID, "LOSSLESS"},
-			{MQA_ID, "HI_RES"},
+			{HIRES_FLAC_ID, "LOW"},
+			{HIRES_FLAC_ID, "HIGH"},
+			{HIRES_FLAC_ID, "LOSSLESS"},
 			{HIRES_FLAC_ID, "HI_RES_LOSSLESS"},
-			{SONY_360_ID, "HI_RES"},
-			{ATMOS_ID, "HI_RES"},
+			{ATMOS_ID, "HI_RES_LOSSLESS"},
 		}
 
 		fmt.Println("Supported formats:")
